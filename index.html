@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dash">
+<meta name="theme-color" content="#ffffff">
+<title>Dash</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ============ Start screen (unlocks sound + location) ============ -->
+<div class="start" id="start">
+  <div class="start-clock" id="startClock">0:00</div>
+  <button class="pill" id="startBtn">Start Drive</button>
+  <p>Turns on location for your speed and sound for the speed limit chime.</p>
+</div>
+
+<!-- ============ Dashboard ============ -->
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="cap" id="dateTop">—</div>
+    <div class="topbar-r"><span class="time" id="timeTop">—</span><span class="stat-slot"></span><button class="icon-btn" data-open="settings" aria-label="Settings"><svg width="22" height="22"><use href="#i-gear"/></svg></button></div>
+  </header>
+
+  <main class="main">
+    <section class="col left">
+      <div class="cap date-wide" id="date">—</div>
+      <div class="speedhead">
+        <div class="speed idle" id="speed">0</div>
+        <div class="unit">km/h</div>
+        <button class="limit" id="limitBtn" aria-label="Speed limit">
+          <div class="sign"><small>MAX</small><b id="limitVal">50</b></div>
+          <div class="src" id="limitSrc">Manual</div>
+        </button>
+      </div>
+
+      <div class="panel" id="panel">
+        <div class="tabs" role="tablist">
+          <button data-tab="map" class="on">Map</button>
+          <button data-tab="music">Music</button>
+        </div>
+        <div class="view" id="mapView">
+          <div class="gmap" id="gmap"></div>
+          <div class="empty" id="mapEmpty"></div>
+          <div class="route" id="routeCard" hidden>
+            <div class="route-txt"><div class="eta" id="eta">—</div><div class="sub" id="etaSub">—</div></div>
+            <button class="go" id="goBtn"><svg width="18" height="18"><use href="#i-nav"/></svg>Go</button>
+          </div>
+        </div>
+        <div class="view" id="musicView" hidden>
+          <div class="lib" id="lib"></div>
+          <div class="empty" id="libEmpty" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="col right">
+      <div class="cap cap-places">PLACES</div>
+      <div class="tiles" id="places"></div>
+      <div class="cap cap-people">PEOPLE</div>
+      <div class="tiles" id="people"></div>
+      <div class="flex"></div>
+      <div class="weather" id="weather">
+        <div class="wtop"><span class="wicon" id="wIcon"></span><div class="wtemp" id="wTemp">—</div><div><div class="wcond" id="wCond">Weather</div><div class="whl" id="wHL">Waiting for location</div></div></div>
+        <div class="hours" id="wHours"></div>
+      </div>
+      <div class="flex"></div>
+      <div class="music" id="musicCard">
+        <div class="song-wrap"><div class="song" id="song">Not playing</div><div class="artist" id="artist">Spotify</div></div>
+        <div class="ctrls">
+          <button class="ctl" data-sp="restart" aria-label="Start over"><svg width="24" height="24"><use href="#i-restart"/></svg></button>
+          <button class="play" data-sp="toggle" aria-label="Play or pause"><svg width="20" height="20"><use href="#i-play" class="pp"/></svg></button>
+          <button class="ctl" data-sp="next" aria-label="Skip"><svg width="24" height="24"><use href="#i-skip"/></svg></button>
+        </div>
+        <div class="bar"><i class="prog"></i></div>
+        <div class="times"><span class="t-pos">0:00</span><span class="t-len">0:00</span></div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="rail">
+    <div class="time" id="time">—</div>
+    <div class="stat-slot"></div>
+    <nav class="dock">
+      <button class="ic" data-dock="map" aria-label="Map"><svg width="24" height="24"><use href="#i-nav"/></svg></button>
+      <button class="ic" data-dock="music" aria-label="Spotify"><svg width="26" height="26"><use href="#i-waves"/></svg></button>
+      <button class="ic" data-dock="phone" aria-label="Phone"><svg width="22" height="22"><use href="#i-phone"/></svg></button>
+      <button class="ic" data-dock="messages" aria-label="Messages"><svg width="22" height="22"><use href="#i-msg"/></svg></button>
+    </nav>
+    <button class="icon-btn gear" data-open="settings" aria-label="Settings"><svg width="24" height="24"><use href="#i-gear"/></svg></button>
+  </aside>
+</div>
+
+<!-- ============ Standby ============ -->
+<div class="standby" id="standby" hidden>
+  <div class="clock" id="clock">0:00</div>
+  <div class="cards">
+    <div class="stat-top"><span class="stat-slot"></span></div>
+    <div class="card">
+      <div class="cap" id="sbDay">—</div>
+      <div><div class="big" id="sbDate">—</div><div class="whl" id="sbWeather"></div></div>
+    </div>
+    <div class="card speed-card">
+      <div class="card-head"><div class="cap">SPEED</div><div class="sign sm"><small>MAX</small><b id="sbLimit">50</b></div></div>
+      <div class="sb-speed"><div class="sb-num" id="sbSpeed">0</div><div class="whl">km/h</div></div>
+    </div>
+    <div class="card music-mini">
+      <div class="cap">NOW PLAYING</div>
+      <div>
+        <div class="mid song">Not playing</div><div class="whl artist">Spotify</div>
+        <div class="bar"><i class="prog"></i></div>
+        <div class="times"><span class="t-pos">0:00</span><span class="t-len">0:00</span></div>
+        <div class="ctrls center">
+          <button class="ctl" data-sp="restart" aria-label="Start over"><svg width="24" height="24"><use href="#i-restart"/></svg></button>
+          <button class="play" data-sp="toggle" aria-label="Play or pause"><svg width="20" height="20"><use href="#i-play" class="pp"/></svg></button>
+          <button class="ctl" data-sp="next" aria-label="Skip"><svg width="24" height="24"><use href="#i-skip"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Sheets ============ -->
+<div class="scrim" id="scrim"></div>
+
+<section class="sheet" id="sheet-person" aria-label="Contact">
+  <div class="grabber"></div>
+  <div class="sheet-head"><h2 id="personName">—</h2><button class="done" data-close>Done</button></div>
+  <div class="person-actions">
+    <a class="big-act" id="callLink"><svg width="26" height="26"><use href="#i-phone"/></svg>Call</a>
+    <a class="big-act" id="textLink"><svg width="26" height="26"><use href="#i-msg"/></svg>Message</a>
+  </div>
+</section>
+
+<section class="sheet" id="sheet-phone" aria-label="Call">
+  <div class="grabber"></div>
+  <div class="sheet-head"><h2>Call</h2><button class="done" data-close>Done</button></div>
+  <div class="group" id="phoneList"></div>
+</section>
+
+<section class="sheet" id="sheet-settings" aria-label="Settings">
+  <div class="grabber"></div>
+  <div class="sheet-head"><h2>Settings</h2><button class="done" data-close>Done</button></div>
+
+  <div class="section"><h3>Places</h3>
+    <div class="group">
+      <label class="field"><span>Home address</span><input id="fHome" placeholder="Street, city" autocomplete="off"></label>
+      <label class="field"><span>Second place name</span><input id="fP2Name" placeholder="UBC" autocomplete="off"></label>
+      <label class="field"><span>Second place address</span><input id="fP2Addr" placeholder="Address" autocomplete="off"></label>
+    </div>
+  </div>
+
+  <div class="section"><h3>People</h3>
+    <div class="group" id="fPeople"></div>
+    <p class="foot">Saved only on this iPad. Calls and texts go through your iPhone.</p>
+  </div>
+
+  <div class="section"><h3>Speed limit</h3>
+    <div class="group">
+      <div class="row"><div>Detect automatically<div class="hint">Uses OpenStreetMap. Needs internet.</div></div><label class="switch"><input type="checkbox" id="fAuto"><span></span></label></div>
+      <div class="row"><div>Chime when over</div><label class="switch"><input type="checkbox" id="fChime"><span></span></label></div>
+    </div>
+    <h3 class="mt">Manual limit <span class="lc" id="manualHint"></span></h3>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="section"><h3>Spotify</h3>
+    <div class="group">
+      <label class="field"><span>Client ID</span><input id="fSpId" placeholder="From developer.spotify.com" autocomplete="off" spellcheck="false"></label>
+      <div class="row"><div id="spStatus">Not connected</div><button class="link" id="spBtn">Connect</button></div>
+      <label class="field"><span>Paste code</span><input id="fSpCode" placeholder="Only if asked to paste a code" autocomplete="off" spellcheck="false"></label>
+      <div class="row"><div>Black &amp; white artwork</div><label class="switch"><input type="checkbox" id="fMono"><span></span></label></div>
+    </div>
+    <p class="foot">Redirect URI to add in Spotify: <b id="redirUri"></b></p>
+  </div>
+
+  <div class="section"><h3>Google Maps</h3>
+    <div class="group">
+      <label class="field"><span>API key</span><input id="fGKey" placeholder="AIza…" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <p class="foot">Saved only on this iPad, never in your GitHub code.</p>
+  </div>
+
+  <div class="section"><h3>Display</h3>
+    <div class="seg" id="themeSeg"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div>
+    <p class="foot">Auto switches at sunrise and sunset, like Apple Maps.</p>
+    <h3 class="mt">Standby clock after</h3>
+    <div class="seg four" id="sbSeg"><button data-v="0">Off</button><button data-v="15">15 s</button><button data-v="30">30 s</button><button data-v="60">1 min</button></div>
+  </div>
+
+  <p class="foot" id="diag">Waiting for location…</p>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============ Status circle (Duo style) ============ -->
+<template id="statTpl">
+  <svg class="stat" width="38" height="38" viewBox="0 0 32 32" aria-label="Status">
+    <circle class="st-track" cx="16" cy="16" r="13.5"/>
+    <circle class="st-ring" cx="16" cy="16" r="13.5" transform="rotate(-90 16 16)"/>
+    <g class="st-net"><path d="M10.4 13.4a8 8 0 0 1 11.2 0M12.5 15.6a5 5 0 0 1 7 0"/><circle cx="16" cy="18" r="1.3"/></g>
+    <g class="st-dots"><circle cx="11.8" cy="22.8" r="1.15"/><circle cx="14.6" cy="22.8" r="1.15"/><circle cx="17.4" cy="22.8" r="1.15"/><circle cx="20.2" cy="22.8" r="1.15"/></g>
+  </svg>
+</template>
+
+<!-- ============ Icons ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-nav" viewBox="0 0 24 24"><path d="M12 3.5 18.5 20 12 16.4 5.5 20z" fill="currentColor"/></symbol>
+    <symbol id="i-waves" viewBox="0 0 24 24"><path d="M6.3 9.2c3.9-1.3 8.2-1 11.6.9M7 12.6c3.2-1 6.7-.7 9.4.8M7.7 15.8c2.5-.7 5.1-.5 7.2.6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.8 3.8h2.4l1.4 4-2 1.3a11 11 0 0 0 5.9 5.9l1.3-2 4 1.4v2.4a2 2 0 0 1-2 2A15.6 15.6 0 0 1 4.8 5.8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24"><path d="M4 11.5c0-4.1 3.6-7 8-7s8 2.9 8 7-3.6 7-8 7c-1 0-2-.1-2.9-.4L5 19.5l1.3-3.3C4.8 15 4 13.3 4 11.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11.2 12 4l8.5 7.2M6 9.5V20h12V9.5M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24"><path d="M2.5 9.5 12 5.5l9.5 4L12 13.5zM6.5 11.3v4.4c1.6 1.4 3.4 2 5.5 2s3.9-.6 5.5-2v-4.4M21.5 9.5v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gas" viewBox="0 0 24 24"><path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h6A1.5 1.5 0 0 1 14 5.5V20M3.5 20h12M5 10h9M14 9h1.8a1.5 1.5 0 0 1 1.5 1.5v5a1.4 1.4 0 0 0 2.8 0V8.2L17.8 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.3"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"/></g></symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24"><rect x="5" y="6" width="2" height="12" rx="1" fill="currentColor"/><path d="M19 6.6v10.8a.8.8 0 0 1-1.2.7L9.6 12.7a.8.8 0 0 1 0-1.4l8.2-5.4a.8.8 0 0 1 1.2.7z" fill="currentColor"/></symbol>
+    <symbol id="i-skip" viewBox="0 0 24 24"><rect x="17" y="6" width="2" height="12" rx="1" fill="currentColor"/><path d="M5 6.6v10.8a.8.8 0 0 0 1.2.7l8.2-5.4a.8.8 0 0 0 0-1.4L6.2 5.9A.8.8 0 0 0 5 6.6z" fill="currentColor"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.6v12.8a.9.9 0 0 0 1.4.8l10-6.4a.9.9 0 0 0 0-1.6l-10-6.4A.9.9 0 0 0 8 5.6z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<script src="app.js"></script>
+</body>
+</html>
