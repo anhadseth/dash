@@ -23,7 +23,7 @@ const S = {
 const save = (k, v) => { S[k] = v; store.set(k, v); };
 
 if (DEMO) Object.assign(S, {
-  home: "9235 Hardy Rd, Delta, BC", people: [{ name: "Mom", num: "6045550101" }, { name: "Dad", num: "6045550102" }, { name: "Jay", num: "6045550103" }],
+  home: "Home", people: [{ name: "Mom", num: "6045550101" }, { name: "Dad", num: "6045550102" }, { name: "Jay", num: "6045550103" }],
   lastLat: 49.2606, lastLon: -123.246
 });
 
@@ -274,7 +274,7 @@ async function weatherMaybe(force) {
     } else {
       const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2`;
       wx = await (await fetch(u)).json();
-      try { const g = await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)).json(); place = g.city || g.locality || ""; } catch {}
+      try { const g = await (await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)).json(); place = (g.city || g.locality || "").replace(/^Metro\s+/i, "").replace(/\s+Regional District$/i, ""); } catch {}
     }
     wxAt = Date.now(); store.set("wx", wx); store.set("wxAt", wxAt); store.set("wxPlace", place);
     renderWeather();
@@ -304,9 +304,9 @@ function startNav(dest) { openURL(gmapsDir(dest)); setTimeout(() => { if (docume
 $("#places").addEventListener("click", e => {
   const b = e.target.closest("[data-place]"); if (!b) return;
   const p = places().find(x => x.key === b.dataset.place);
-  if (p.key === "gas") { openURL("comgooglemaps://?q=gas+station"); return; }
+  if (p.key === "gas") { if (document.body.classList.contains("narrow")) openURL("comgooglemaps://?q=gas+station"); else { setTab("map"); findGas(); } return; }
   if (!p.addr) { toast(`Add the ${p.name} address in Settings`); openSheet("settings"); return; }
-  if (document.body.classList.contains("narrow")) { startNav(p.addr); return; }
+  if (document.body.classList.contains("narrow")) { startNav(navTarget(p)); return; }
   setTab("map"); routeTo(p);
 });
 $("#people").addEventListener("click", e => {
@@ -374,19 +374,77 @@ function decodePolyline(str) {
   }
   return out;
 }
+/* Google web-service calls: send the full page address so a key locked to /dash/* accepts it */
+async function gPost(url, mask, body) {
+  const r = await fetch(url, { method: "POST", referrerPolicy: "no-referrer-when-downgrade",
+    headers: { "Content-Type": "application/json", "X-Goog-Api-Key": S.gKey, "X-Goog-FieldMask": mask }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error?.message || `Google error ${r.status}`);
+  return j;
+}
+function whyFailed(m) {
+  m = String(m || "");
+  if (/not been used|disabled|SERVICE_DISABLED/i.test(m)) return "API not turned on in Google Cloud";
+  if (/blocked|referer|referrer|not authorized|API_KEY/i.test(m)) return "key isn't allowed to use this API";
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "no connection";
+  return m.slice(0, 60);
+}
+const here = () => pos ? { lat: pos.lat, lon: pos.lon } : S.lastLat != null ? { lat: S.lastLat, lon: S.lastLon } : null;
+const navTarget = (p) => p.ll ? `${p.ll.lat},${p.ll.lng}` : p.addr;
+
+/* nearby gas, shown on the dashboard map */
+let gasMarkers = [];
+function clearGas() { gasMarkers.forEach(m => m.setMap(null)); gasMarkers = []; $("#gasCard").hidden = true; }
+async function findGas() {
+  if (routeLine) { routeLine.setMap(null); routeLine = null; }
+  $("#routeCard").hidden = true; clearGas();
+  const card = $("#gasCard"), rows = $("#gasRows"); card.hidden = false;
+  const me = here();
+  if (!S.gKey || !navigator.onLine || !me) { rows.innerHTML = `<div class="gas-msg">${!me ? "Waiting for your location" : !S.gKey ? "Add a Google key in Settings" : "Offline"}</div><button class="gas-row" data-gasapp>Open in Google Maps</button>`; return; }
+  rows.innerHTML = `<div class="gas-msg">Finding gas stations…</div>`;
+  try {
+    const j = await gPost("https://places.googleapis.com/v1/places:searchNearby", "places.displayName,places.location,places.shortFormattedAddress",
+      { includedTypes: ["gas_station"], maxResultCount: 10, rankPreference: "DISTANCE", locationRestriction: { circle: { center: { latitude: me.lat, longitude: me.lon }, radius: 8000 } } });
+    const list = (j.places || []).map(p => ({ name: p.displayName?.text || "Gas station", sub: p.shortFormattedAddress || "", ll: { lat: p.location.latitude, lng: p.location.longitude } }))
+      .map(p => ({ ...p, km: dist({ lat: me.lat, lon: me.lon }, { lat: p.ll.lat, lon: p.ll.lng }) / 1000 })).slice(0, 4);
+    if (!list.length) { rows.innerHTML = `<div class="gas-msg">No gas stations within 8 km</div>`; return; }
+    rows.innerHTML = list.map((p, i) => `<button class="gas-row" data-gas="${i}"><span class="gas-n">${esc(p.name)}<small>${esc(p.sub)}</small></span><span class="gas-d">${p.km < 10 ? p.km.toFixed(1) : Math.round(p.km)} km</span></button>`).join("");
+    rows._list = list;
+    if (map) {
+      const b = new google.maps.LatLngBounds(); b.extend({ lat: me.lat, lng: me.lon });
+      list.forEach((p, i) => {
+        const m = new google.maps.Marker({ map, position: p.ll, label: { text: String(i + 1), color: curTheme === "dark" ? "#000" : "#fff", fontSize: "12px", fontWeight: "600" },
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 11, fillColor: curTheme === "dark" ? "#fff" : "#000", fillOpacity: 1, strokeColor: curTheme === "dark" ? "#000" : "#fff", strokeWeight: 2 } });
+        m.addListener("click", () => pickGas(i)); gasMarkers.push(m); b.extend(p.ll);
+      });
+      map.fitBounds(b, { top: 70, left: 40, right: 40, bottom: 260 });
+    }
+    rows.innerHTML = rows.innerHTML.replace(/data-gas="(\d)"><span class="gas-n">/g, (m, i) => `data-gas="${i}"><span class="gas-i">${+i + 1}</span><span class="gas-n">`);
+  } catch (e) { rows.innerHTML = `<div class="gas-msg">Couldn't search · ${esc(whyFailed(e.message))}</div><button class="gas-row" data-gasapp>Open in Google Maps</button>`; }
+}
+function pickGas(i) {
+  const p = $("#gasRows")._list?.[i]; if (!p) return;
+  $("#gasCard").hidden = true;
+  gasMarkers.forEach((m, k) => m.setOpacity(k === i ? 1 : .35));
+  routeTo({ key: "gasstop", name: p.name, ll: p.ll, addr: p.sub });
+}
+$("#gasRows").addEventListener("click", e => {
+  if (e.target.closest("[data-gasapp]")) { openURL("comgooglemaps://?q=gas+station"); return; }
+  const b = e.target.closest("[data-gas]"); if (b) pickGas(+b.dataset.gas);
+});
+
 async function routeTo(p) {
   routeDest = p;
+  if (p.key !== "gasstop") clearGas();
   $("#routeCard").hidden = false; $("#eta").textContent = "…"; $("#etaSub").textContent = `${p.name} · finding route`;
   if (!S.gKey || !navigator.onLine) { $("#eta").textContent = p.name; $("#etaSub").textContent = navigator.onLine ? "Add a Google key for ETAs" : "Offline · tap Go to navigate"; return; }
-  const origin = pos ? { location: { latLng: { latitude: pos.lat, longitude: pos.lon } } } : S.lastLat != null ? { location: { latLng: { latitude: S.lastLat, longitude: S.lastLon } } } : null;
+  const me = here(), origin = me ? { location: { latLng: { latitude: me.lat, longitude: me.lon } } } : null;
   if (!origin) { $("#eta").textContent = p.name; $("#etaSub").textContent = "Waiting for your location"; return; }
   try {
-    const r = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": S.gKey, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline" },
-      body: JSON.stringify({ origin, destination: { address: p.addr }, travelMode: "DRIVE", routingPreference: "TRAFFIC_AWARE" })
-    });
-    const j = await r.json(); const rt = j.routes && j.routes[0];
+    const destination = p.ll ? { location: { latLng: { latitude: p.ll.lat, longitude: p.ll.lng } } } : { address: p.addr };
+    const j = await gPost("https://routes.googleapis.com/directions/v2:computeRoutes", "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+      { origin, destination, travelMode: "DRIVE", routingPreference: "TRAFFIC_AWARE" });
+    const rt = j.routes && j.routes[0];
     if (!rt) throw new Error(j.error?.message || "No route");
     const sec = parseInt(rt.duration), mins = Math.round(sec / 60);
     const arrive = hm(new Date(Date.now() + sec * 1000));
@@ -400,10 +458,10 @@ async function routeTo(p) {
       map.fitBounds(b, { top: 70, left: 30, right: 30, bottom: 110 });
     }
   } catch (err) {
-    $("#eta").textContent = p.name; $("#etaSub").textContent = "Couldn't get ETA · tap Go to navigate";
+    $("#eta").textContent = p.name; $("#etaSub").textContent = `No ETA: ${whyFailed(err.message)} · Go still works`;
   }
 }
-$("#goBtn").addEventListener("click", () => { if (routeDest) startNav(routeDest.addr); });
+$("#goBtn").addEventListener("click", () => { if (routeDest) startNav(navTarget(routeDest)); });
 
 /* ======================= Spotify ======================= */
 const SP_SCOPES = "user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private user-library-read";

@@ -94,6 +94,15 @@ button:active, a:active { transform: scale(.96); }
 .empty .pill { margin-top: 6px; }
 .route { position: absolute; z-index: 3; left: 14px; right: 14px; bottom: 14px; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 18px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 14px rgba(0,0,0,.1); }
 .route-txt { min-width: 0; }
+.gascard { position: absolute; z-index: 3; left: 14px; right: 14px; bottom: 14px; background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 18px; padding: 14px 8px 6px; box-shadow: 0 2px 14px rgba(0,0,0,.1); }
+.gascard .cap { padding: 0 10px 6px; }
+.gas-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; text-align: left; }
+.gas-row + .gas-row { border-top: 1px solid var(--hair); }
+.gas-i { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 600; display: grid; place-items: center; }
+.gas-n { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gas-n small { display: block; font-size: 12px; font-weight: 400; color: var(--sec); overflow: hidden; text-overflow: ellipsis; }
+.gas-d { flex: none; font-size: 14px; color: var(--sec); font-variant-numeric: tabular-nums; }
+.gas-msg { padding: 10px; font-size: 15px; color: var(--sec); }
 .eta { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
 .sub { font-size: 13px; color: var(--sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .go { margin-left: auto; flex: none; height: 46px; padding: 0 22px; border-radius: 23px; background: var(--play-bg); color: var(--play-fg); font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 8px; }
